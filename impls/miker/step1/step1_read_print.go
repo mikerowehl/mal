@@ -31,7 +31,7 @@ func EVAL(v mal.MalType) mal.MalType {
 }
 
 func PRINT(v mal.MalType) {
-	mal.Pr_str(v)
+	mal.Pr_str(v, true)
 	fmt.Println()
 }
 

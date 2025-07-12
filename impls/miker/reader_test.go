@@ -1,6 +1,7 @@
 package mal
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,6 +10,11 @@ import (
 func TestTokenize(t *testing.T) {
 	tokens := tokenize("(1 (2 3) 4)")
 	require.Equal(t, len(tokens), 8)
+}
+
+func TestTokenizeQuoteMismatch(t *testing.T) {
+	tokens := tokenize(`"abc`)
+	fmt.Printf("%q\n", tokens)
 }
 
 func TestReader(t *testing.T) {
