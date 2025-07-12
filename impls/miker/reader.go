@@ -10,6 +10,7 @@ type MalType any
 type MalSymbol string
 type MalList []any
 type MalVector []any
+type MalHashmap []any
 
 type Reader struct {
 	Tokens  []string
@@ -157,6 +158,25 @@ func read_vector(reader *Reader) (MalVector, error) {
 	}
 }
 
+func read_hashmap(reader *Reader) (MalHashmap, error) {
+	var hashmap []any
+	for {
+		if reader.Done() {
+			return nil, fmt.Errorf("read_hashmap: EOF")
+		}
+		next := reader.Peek()
+		if next == "}" {
+			reader.Next()
+			return hashmap, nil
+		}
+		val, err := read_form(reader)
+		if err != nil {
+			return nil, fmt.Errorf("read_hashmap: Error in subform: %w", err)
+		}
+		hashmap = append(hashmap, val)
+	}
+}
+
 func read_form(reader *Reader) (MalType, error) {
 	if reader.Done() {
 		return nil, fmt.Errorf("read_form: Missing input")
@@ -170,6 +190,10 @@ func read_form(reader *Reader) (MalType, error) {
 		reader.Next()
 		return read_vector(reader)
 	}
+	if next == "{" {
+		reader.Next()
+		return read_hashmap(reader)
+	}
 	if next == "'" {
 		reader.Next()
 		quoted, err := read_form(reader)
@@ -177,6 +201,50 @@ func read_form(reader *Reader) (MalType, error) {
 			return nil, fmt.Errorf("read_form: quoted error %w", err)
 		}
 		return MalList{MalSymbol("quote"), quoted}, nil
+	}
+	if next == "`" {
+		reader.Next()
+		quoted, err := read_form(reader)
+		if err != nil {
+			return nil, fmt.Errorf("read_form: quasiquoted error %w", err)
+		}
+		return MalList{MalSymbol("quasiquote"), quoted}, nil
+	}
+	if next == "~" {
+		reader.Next()
+		unquoted, err := read_form(reader)
+		if err != nil {
+			return nil, fmt.Errorf("read_form: unquoted error %w", err)
+		}
+		return MalList{MalSymbol("unquote"), unquoted}, nil
+	}
+	if next == "~@" {
+		reader.Next()
+		unquoted, err := read_form(reader)
+		if err != nil {
+			return nil, fmt.Errorf("read_form: splice-unquote error %w", err)
+		}
+		return MalList{MalSymbol("splice-unquote"), unquoted}, nil
+	}
+	if next == "@" {
+		reader.Next()
+		deref, err := read_form(reader)
+		if err != nil {
+			return nil, fmt.Errorf("read_form: deref error %w", err)
+		}
+		return MalList{MalSymbol("deref"), deref}, nil
+	}
+	if next == "^" {
+		reader.Next()
+		meta, err := read_form(reader)
+		if err != nil {
+			return nil, fmt.Errorf("read_form: with metadata %w", err)
+		}
+		val, err := read_form(reader)
+		if err != nil {
+			return nil, fmt.Errorf("read_form: with metadata value %w", err)
+		}
+		return MalList{MalSymbol("with-meta"), val, meta}, nil
 	}
 	return read_atom(reader)
 }
@@ -224,6 +292,15 @@ func Pr_str(o MalType, readably bool) {
 			sep = " "
 		}
 		fmt.Print("]")
+	case MalHashmap:
+		fmt.Print("{")
+		sep := ""
+		for _, sub := range t {
+			fmt.Print(sep)
+			Pr_str(sub, readably)
+			sep = " "
+		}
+		fmt.Print("}")
 	}
 }
 
