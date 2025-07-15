@@ -12,6 +12,7 @@ type MalSymbol string
 type MalList []any
 type MalVector []any
 type MalHashmap []any
+type MalFunc func(MalType) (MalType, error)
 
 type Reader struct {
 	Tokens  []string
