@@ -3,6 +3,7 @@ package mal
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -97,6 +98,11 @@ func process_string(s string) (string, error) {
 	return builder.String(), nil
 }
 
+func check_number(s string) bool {
+	e := regexp.MustCompile(`^[+-]?((\d+(\.\d*)?)|(\.\d+))$`)
+	return e.MatchString(s)
+}
+
 func read_atom(reader *Reader) (MalType, error) {
 	next := reader.Next()
 	if len(next) == 0 {
@@ -108,6 +114,9 @@ func read_atom(reader *Reader) (MalType, error) {
 		}
 		// We know it had a quote at the start and end, strip them and process
 		return process_string(next[1 : len(next)-1])
+	}
+	if check_number(next) {
+		return strconv.Atoi(next)
 	}
 	if next[0] == ':' {
 		keyword := next[1:]
@@ -272,6 +281,8 @@ func Pr_str(o MalType, readably bool) {
 		} else {
 			fmt.Print(`""`)
 		}
+	case int:
+		fmt.Print(t)
 	case MalSymbol:
 		fmt.Print(t)
 	case MalList:
